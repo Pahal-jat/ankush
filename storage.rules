@@ -1,0 +1,115 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ==================== Helper Functions ====================
+
+    /**
+     * Check if user is authenticated
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Check if user is an admin
+     */
+    function isAdmin() {
+      return request.auth != null &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    /**
+     * Check if user account is active
+     */
+    function isActive() {
+      return request.auth != null &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+
+    /**
+     * Validate file size
+     */
+    function isValidSize(maxSizeBytes) {
+      return request.resource.size <= maxSizeBytes;
+    }
+
+    /**
+     * Validate file type
+     */
+    function isValidFileType(allowedTypes) {
+      return request.resource.contentType in allowedTypes;
+    }
+
+    // ==================== Syllabus Files ====================
+
+    match /syllabus/{class}/{subject}/{fileName} {
+      // All authenticated active users can read syllabus files
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can upload syllabus files
+      // Max size: 20MB
+      // Allowed types: PDF, DOC, DOCX
+      allow write: if isAdmin() &&
+        isValidSize(20 * 1024 * 1024) &&
+        isValidFileType([
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ]);
+
+      // Only admins can delete syllabus files
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Homework Files ====================
+
+    match /homework/{class}/{subject}/{fileName} {
+      // All authenticated active users can read homework files
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can upload homework files
+      // Max size: 10MB
+      // Allowed types: PDF, DOC, DOCX, JPG, PNG
+      allow write: if isAdmin() &&
+        isValidSize(10 * 1024 * 1024) &&
+        isValidFileType([
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/jpeg',
+          'image/png'
+        ]);
+
+      // Only admins can delete homework files
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Student Profile Images ====================
+
+    match /students/profile-images/{fileName} {
+      // All authenticated active users can read profile images
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can upload profile images
+      // Max size: 5MB
+      // Allowed types: JPG, PNG
+      allow write: if isAdmin() &&
+        isValidSize(5 * 1024 * 1024) &&
+        isValidFileType([
+          'image/jpeg',
+          'image/png'
+        ]);
+
+      // Only admins can delete profile images
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Default Deny ====================
+
+    // Deny all other storage requests by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

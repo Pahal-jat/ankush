@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==================== Helper Functions ====================
+
+    /**
+     * Check if user is authenticated
+     */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /**
+     * Check if user is an admin
+     */
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    /**
+     * Check if user is a student
+     */
+    function isStudent() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+
+    /**
+     * Check if user is the owner of the document
+     */
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    /**
+     * Check if user account is active
+     */
+    function isActive() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+
+    // ==================== Users Collection ====================
+
+    match /users/{userId} {
+      // Users can read their own data, admins can read all users
+      allow read: if isOwner(userId) || isAdmin();
+
+      // Only admins can create users
+      allow create: if isAdmin();
+
+      // Users can update their own data (except role and admissionNo), admins can update all
+      allow update: if isAdmin() ||
+        (isOwner(userId) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'admissionNo', 'studentId', 'isActive']));
+
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Students Collection ====================
+
+    match /students/{studentId} {
+      // Admins can read all students
+      // Students can only read their own profile
+      allow read: if isAdmin() ||
+        (isStudent() && resource.data.userId == request.auth.uid && isActive());
+
+      // Only admins can create, update, or delete student profiles
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Syllabus Collection ====================
+
+    match /syllabus/{syllabusId} {
+      // All authenticated active users can read syllabus
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete syllabus
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Homework Collection ====================
+
+    match /homework/{homeworkId} {
+      // All authenticated active users can read homework
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete homework
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Tests Collection ====================
+
+    match /tests/{testId} {
+      // All authenticated active users can read tests
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete tests
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Test Scores Collection ====================
+
+    match /test_scores/{scoreId} {
+      // Admins can read all scores
+      // Students can only read their own published scores
+      allow read: if isAdmin() ||
+        (isStudent() &&
+         resource.data.studentId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId &&
+         resource.data.isPublished == true &&
+         isActive());
+
+      // Only admins can create, update, or delete test scores
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Admin Activity Log ====================
+
+    match /admin_activity_log/{logId} {
+      // Only admins can read activity logs
+      allow read: if isAdmin();
+
+      // Only admins can create logs (logs are immutable once created)
+      allow create: if isAdmin();
+
+      // Logs cannot be updated or deleted
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ==================== Default Deny ====================
+
+    // Deny all other requests by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
