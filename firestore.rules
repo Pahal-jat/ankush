@@ -141,6 +141,112 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ==================== Phase 2: Fees Collection ====================
+
+    match /fees/{feeId} {
+      // Admins can read all fees
+      // Students can only read their own fees
+      allow read: if isAdmin() ||
+        (isStudent() && resource.data.studentId ==
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId &&
+          isActive());
+
+      // Only admins can create, update, or delete fees
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Attendance Collection ====================
+
+    match /attendance/{attendanceId} {
+      // Admins can read all attendance records
+      // Students can only read their own attendance
+      allow read: if isAdmin() ||
+        (isStudent() && resource.data.studentId ==
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId &&
+          isActive());
+
+      // Only admins can create, update, or delete attendance
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Transport Collection ====================
+
+    match /transport/{routeId} {
+      // All authenticated active users can read transport routes
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete transport routes
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Gallery Collection ====================
+
+    match /gallery/{imageId} {
+      // All authenticated active users can read gallery images
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete gallery images
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Timetable Collection ====================
+
+    match /timetable/{timetableId} {
+      // All authenticated active users can read timetables
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete timetables
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Contacts Collection ====================
+
+    match /contacts/{contactId} {
+      // All authenticated active users can read contacts
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can create, update, or delete contacts
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Exams Collection ====================
+
+    match /exams/{examId} {
+      // All authenticated active users can read published exams
+      // Admins can read all exams
+      allow read: if isAdmin() ||
+        (isAuthenticated() && isActive() && resource.data.isPublished == true);
+
+      // Only admins can create, update, or delete exams
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Notices Collection ====================
+
+    match /notices/{noticeId} {
+      // All authenticated active users can read active notices
+      allow read: if isAuthenticated() && isActive() && resource.data.isActive == true;
+
+      // Only admins can create, update, or delete notices
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
     // ==================== Default Deny ====================
 
     // Deny all other requests by default

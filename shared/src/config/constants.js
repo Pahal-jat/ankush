@@ -20,6 +20,15 @@ export const COLLECTIONS = {
   TESTS: 'tests',
   TEST_SCORES: 'test_scores',
   ADMIN_ACTIVITY_LOG: 'admin_activity_log',
+  // Phase 2 Collections
+  FEES: 'fees',
+  ATTENDANCE: 'attendance',
+  TRANSPORT: 'transport',
+  GALLERY: 'gallery',
+  TIMETABLE: 'timetable',
+  CONTACTS: 'contacts',
+  EXAMS: 'exams',
+  NOTICES: 'notices',
 };
 
 // Test Types
@@ -64,6 +73,9 @@ export const FILE_SIZE_LIMITS = {
   HOMEWORK: 10 * 1024 * 1024, // 10MB
   SYLLABUS: 20 * 1024 * 1024, // 20MB
   PROFILE_IMAGE: 5 * 1024 * 1024, // 5MB
+  GALLERY_IMAGE: 5 * 1024 * 1024, // 5MB
+  TIMETABLE: 10 * 1024 * 1024, // 10MB
+  NOTICE_ATTACHMENT: 10 * 1024 * 1024, // 10MB
 };
 
 // Supported File Types
@@ -158,6 +170,9 @@ export const STORAGE_PATHS = {
   SYLLABUS: (className, subject) => `syllabus/${className}/${subject}`,
   HOMEWORK: (className, subject) => `homework/${className}/${subject}`,
   PROFILE_IMAGES: 'students/profile-images',
+  GALLERY: 'gallery',
+  TIMETABLE: (className) => `timetable/${className}`,
+  NOTICE_ATTACHMENTS: 'notices/attachments',
 };
 
 // Date Formats
@@ -173,4 +188,96 @@ export const VALIDATION_REGEX = {
   PHONE: /^[6-9]\d{9}$/,
   PINCODE: /^\d{6}$/,
   ADMISSION_NO: /^[A-Z0-9]{6,10}$/,
+};
+
+// Phase 2 Constants
+
+// Attendance Status
+export const ATTENDANCE_STATUS = {
+  PRESENT: 'present',
+  ABSENT: 'absent',
+  LATE: 'late',
+  EXCUSED: 'excused',
+};
+
+// Fee Status
+export const FEE_STATUS = {
+  PENDING: 'pending',
+  PAID: 'paid',
+  OVERDUE: 'overdue',
+  PARTIAL: 'partial',
+};
+
+// Fee Types
+export const FEE_TYPES = {
+  TUITION: 'tuition',
+  TRANSPORT: 'transport',
+  EXAMINATION: 'examination',
+  LIBRARY: 'library',
+  SPORTS: 'sports',
+  LAB: 'lab',
+  OTHER: 'other',
+};
+
+// Payment Methods
+export const PAYMENT_METHODS = {
+  CASH: 'cash',
+  ONLINE: 'online',
+  CHEQUE: 'cheque',
+  BANK_TRANSFER: 'bank_transfer',
+  RAZORPAY: 'razorpay',
+};
+
+// Notice Types
+export const NOTICE_TYPES = {
+  GENERAL: 'general',
+  URGENT: 'urgent',
+  EVENT: 'event',
+  HOLIDAY: 'holiday',
+  EXAM: 'exam',
+  FEE: 'fee',
+};
+
+// Notice Targets
+export const NOTICE_TARGETS = {
+  ALL: 'all',
+  CLASS: 'class',
+  STUDENT: 'student',
+};
+
+// Contact Types
+export const CONTACT_TYPES = {
+  TEACHER: 'teacher',
+  STAFF: 'staff',
+  PRINCIPAL: 'principal',
+  VICE_PRINCIPAL: 'vice_principal',
+  ACCOUNTANT: 'accountant',
+};
+
+// Exam Types (Extended)
+export const EXAM_TYPES = {
+  ...TEST_TYPES,
+  ANNUAL: 'annual',
+  HALF_YEARLY: 'half_yearly',
+  QUARTERLY: 'quarterly',
+  MONTHLY: 'monthly',
+};
+
+// Days of Week
+export const DAYS_OF_WEEK = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+// Pagination (Extended)
+export const PAGINATION_EXTENDED = {
+  ...PAGINATION,
+  ATTENDANCE_PER_PAGE: 50,
+  FEES_PER_PAGE: 20,
+  NOTICES_PER_PAGE: 20,
+  GALLERY_PER_PAGE: 20,
 };
