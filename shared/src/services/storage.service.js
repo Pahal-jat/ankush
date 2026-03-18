@@ -162,9 +162,43 @@ class StorageService {
   }
 
   /**
+   * Generate storage path for gallery image
+   * @param {string} fileName - File name
+   * @returns {string} Storage path
+   */
+  getGalleryPath(fileName) {
+    const timestamp = Date.now();
+    const sanitizedFileName = this._sanitizeFileName(fileName);
+    return `${STORAGE_PATHS.GALLERY}/${sanitizedFileName}_${timestamp}`;
+  }
+
+  /**
+   * Generate storage path for timetable
+   * @param {string} className - Class name
+   * @param {string} fileName - File name
+   * @returns {string} Storage path
+   */
+  getTimetablePath(className, fileName) {
+    const timestamp = Date.now();
+    const sanitizedFileName = this._sanitizeFileName(fileName);
+    return `${STORAGE_PATHS.TIMETABLE(className)}/${sanitizedFileName}_${timestamp}`;
+  }
+
+  /**
+   * Generate storage path for notice attachment
+   * @param {string} fileName - File name
+   * @returns {string} Storage path
+   */
+  getNoticeAttachmentPath(fileName) {
+    const timestamp = Date.now();
+    const sanitizedFileName = this._sanitizeFileName(fileName);
+    return `${STORAGE_PATHS.NOTICE_ATTACHMENTS}/${sanitizedFileName}_${timestamp}`;
+  }
+
+  /**
    * Validate file size
    * @param {number} fileSize - File size in bytes
-   * @param {string} fileType - File type ('homework', 'syllabus', 'profile_image')
+   * @param {string} fileType - File type ('homework', 'syllabus', 'profile_image', 'gallery_image', 'timetable', 'notice_attachment')
    * @returns {boolean} True if valid
    */
   validateFileSize(fileSize, fileType) {
@@ -172,6 +206,9 @@ class StorageService {
       homework: FILE_SIZE_LIMITS.HOMEWORK,
       syllabus: FILE_SIZE_LIMITS.SYLLABUS,
       profile_image: FILE_SIZE_LIMITS.PROFILE_IMAGE,
+      gallery_image: FILE_SIZE_LIMITS.GALLERY_IMAGE,
+      timetable: FILE_SIZE_LIMITS.TIMETABLE,
+      notice_attachment: FILE_SIZE_LIMITS.NOTICE_ATTACHMENT,
     };
 
     const limit = limits[fileType] || FILE_SIZE_LIMITS.HOMEWORK;

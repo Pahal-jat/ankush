@@ -105,6 +105,70 @@ service firebase.storage {
       allow delete: if isAdmin();
     }
 
+    // ==================== Phase 2: Gallery Images ====================
+
+    match /gallery/{fileName} {
+      // All authenticated active users can read gallery images
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can upload gallery images
+      // Max size: 5MB
+      // Allowed types: JPG, PNG
+      allow write: if isAdmin() &&
+        isValidSize(5 * 1024 * 1024) &&
+        isValidFileType([
+          'image/jpeg',
+          'image/png'
+        ]);
+
+      // Only admins can delete gallery images
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Timetable Files ====================
+
+    match /timetable/{class}/{fileName} {
+      // All authenticated active users can read timetables
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can upload timetables
+      // Max size: 10MB
+      // Allowed types: PDF, Images
+      allow write: if isAdmin() &&
+        isValidSize(10 * 1024 * 1024) &&
+        isValidFileType([
+          'application/pdf',
+          'image/jpeg',
+          'image/png'
+        ]);
+
+      // Only admins can delete timetables
+      allow delete: if isAdmin();
+    }
+
+    // ==================== Phase 2: Notice Attachments ====================
+
+    match /notices/attachments/{fileName} {
+      // All authenticated active users can read notice attachments
+      allow read: if isAuthenticated() && isActive();
+
+      // Only admins can upload notice attachments
+      // Max size: 10MB
+      // Allowed types: PDF, DOC, DOCX, Images
+      allow write: if isAdmin() &&
+        isValidSize(10 * 1024 * 1024) &&
+        isValidFileType([
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'image/jpeg',
+          'image/png'
+        ]);
+
+      // Only admins can delete notice attachments
+      allow delete: if isAdmin();
+    }
+
     // ==================== Default Deny ====================
 
     // Deny all other storage requests by default

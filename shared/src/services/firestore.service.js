@@ -499,6 +499,510 @@ class FirestoreService {
       );
   }
 
+  // ==================== Phase 2: Fees Operations ====================
+
+  /**
+   * Create fee record for a student
+   * @param {Object} feeData - Fee data
+   * @returns {Promise<Object>} Created fee record
+   */
+  async createFee(feeData) {
+    try {
+      const fee = await this.create(COLLECTIONS.FEES, {
+        ...feeData,
+        createdBy: AuthService.getCurrentUser()?.uid,
+        status: 'pending',
+      });
+
+      await this._logAdminActivity('create_fee', 'fee', fee.id, {
+        studentId: feeData.studentId,
+        amount: feeData.amount,
+      });
+
+      return fee;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Record fee payment
+   * @param {string} feeId - Fee ID
+   * @param {Object} paymentData - Payment details
+   * @returns {Promise<void>}
+   */
+  async recordPayment(feeId, paymentData) {
+    try {
+      await this.update(COLLECTIONS.FEES, feeId, {
+        ...paymentData,
+        paidAt: firestore.FieldValue.serverTimestamp(),
+        paidBy: AuthService.getCurrentUser()?.uid,
+      });
+
+      await this._logAdminActivity('record_payment', 'fee', feeId, paymentData);
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get fees for a student
+   * @param {string} studentId - Student ID
+   * @param {string} status - Fee status filter (optional)
+   * @returns {Promise<Array>} Array of fee records
+   */
+  async getFeesByStudent(studentId, status = null) {
+    try {
+      const filters = [
+        { field: 'studentId', operator: '==', value: studentId }
+      ];
+
+      if (status) {
+        filters.push({ field: 'status', operator: '==', value: status });
+      }
+
+      return await this.query(COLLECTIONS.FEES, filters, { field: 'dueDate', direction: 'desc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get fees by class
+   * @param {string} className - Class name
+   * @param {string} status - Fee status filter (optional)
+   * @returns {Promise<Array>} Array of fee records
+   */
+  async getFeesByClass(className, status = null) {
+    try {
+      const filters = [
+        { field: 'class', operator: '==', value: className }
+      ];
+
+      if (status) {
+        filters.push({ field: 'status', operator: '==', value: status });
+      }
+
+      return await this.query(COLLECTIONS.FEES, filters, { field: 'dueDate', direction: 'desc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Attendance Operations ====================
+
+  /**
+   * Mark attendance for a student
+   * @param {Object} attendanceData - Attendance data
+   * @returns {Promise<Object>} Created attendance record
+   */
+  async markAttendance(attendanceData) {
+    try {
+      const attendance = await this.create(COLLECTIONS.ATTENDANCE, {
+        ...attendanceData,
+        markedBy: AuthService.getCurrentUser()?.uid,
+      });
+
+      await this._logAdminActivity('mark_attendance', 'attendance', attendance.id, {
+        studentId: attendanceData.studentId,
+        date: attendanceData.date,
+        status: attendanceData.status,
+      });
+
+      return attendance;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Mark attendance for multiple students
+   * @param {Array} attendanceRecords - Array of attendance data
+   * @returns {Promise<Array>} Array of created attendance records
+   */
+  async markBulkAttendance(attendanceRecords) {
+    try {
+      const batch = firestore().batch();
+      const createdRecords = [];
+
+      attendanceRecords.forEach(record => {
+        const docRef = firestore().collection(COLLECTIONS.ATTENDANCE).doc();
+        batch.set(docRef, {
+          ...record,
+          markedBy: AuthService.getCurrentUser()?.uid,
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+        createdRecords.push({ id: docRef.id, ...record });
+      });
+
+      await batch.commit();
+
+      await this._logAdminActivity('mark_bulk_attendance', 'attendance', null, {
+        count: attendanceRecords.length,
+      });
+
+      return createdRecords;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get attendance for a student
+   * @param {string} studentId - Student ID
+   * @param {Date} startDate - Start date (optional)
+   * @param {Date} endDate - End date (optional)
+   * @returns {Promise<Array>} Array of attendance records
+   */
+  async getAttendanceByStudent(studentId, startDate = null, endDate = null) {
+    try {
+      const filters = [
+        { field: 'studentId', operator: '==', value: studentId }
+      ];
+
+      if (startDate) {
+        filters.push({ field: 'date', operator: '>=', value: startDate });
+      }
+
+      if (endDate) {
+        filters.push({ field: 'date', operator: '<=', value: endDate });
+      }
+
+      return await this.query(COLLECTIONS.ATTENDANCE, filters, { field: 'date', direction: 'desc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get attendance by class and date
+   * @param {string} className - Class name
+   * @param {string} section - Section
+   * @param {Date} date - Date
+   * @returns {Promise<Array>} Array of attendance records
+   */
+  async getAttendanceByClassAndDate(className, section, date) {
+    try {
+      const filters = [
+        { field: 'class', operator: '==', value: className },
+        { field: 'section', operator: '==', value: section },
+        { field: 'date', operator: '==', value: date }
+      ];
+
+      return await this.query(COLLECTIONS.ATTENDANCE, filters);
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Transport Operations ====================
+
+  /**
+   * Create transport route
+   * @param {Object} routeData - Route data
+   * @returns {Promise<Object>} Created route
+   */
+  async createTransportRoute(routeData) {
+    try {
+      const route = await this.create(COLLECTIONS.TRANSPORT, {
+        ...routeData,
+        createdBy: AuthService.getCurrentUser()?.uid,
+        isActive: true,
+      });
+
+      await this._logAdminActivity('create_transport_route', 'transport', route.id, {
+        routeName: routeData.routeName,
+      });
+
+      return route;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get all transport routes
+   * @param {boolean} activeOnly - Only get active routes
+   * @returns {Promise<Array>} Array of routes
+   */
+  async getTransportRoutes(activeOnly = true) {
+    try {
+      const filters = activeOnly ? [{ field: 'isActive', operator: '==', value: true }] : [];
+      return await this.query(COLLECTIONS.TRANSPORT, filters, { field: 'routeName', direction: 'asc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Update transport route
+   * @param {string} routeId - Route ID
+   * @param {Object} data - Data to update
+   * @returns {Promise<void>}
+   */
+  async updateTransportRoute(routeId, data) {
+    try {
+      await this.update(COLLECTIONS.TRANSPORT, routeId, {
+        ...data,
+        lastModifiedBy: AuthService.getCurrentUser()?.uid,
+      });
+
+      await this._logAdminActivity('update_transport_route', 'transport', routeId, data);
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Gallery Operations ====================
+
+  /**
+   * Upload gallery image
+   * @param {Object} galleryData - Gallery data
+   * @returns {Promise<Object>} Created gallery entry
+   */
+  async createGalleryImage(galleryData) {
+    try {
+      const gallery = await this.create(COLLECTIONS.GALLERY, {
+        ...galleryData,
+        uploadedBy: AuthService.getCurrentUser()?.uid,
+        isActive: true,
+      });
+
+      await this._logAdminActivity('upload_gallery_image', 'gallery', gallery.id, {
+        title: galleryData.title,
+      });
+
+      return gallery;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get gallery images
+   * @param {string} category - Category filter (optional)
+   * @param {number} limit - Limit results (optional)
+   * @returns {Promise<Array>} Array of gallery images
+   */
+  async getGalleryImages(category = null, limit = null) {
+    try {
+      const filters = [{ field: 'isActive', operator: '==', value: true }];
+
+      if (category) {
+        filters.push({ field: 'category', operator: '==', value: category });
+      }
+
+      return await this.query(COLLECTIONS.GALLERY, filters, { field: 'uploadedAt', direction: 'desc' }, limit);
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Timetable Operations ====================
+
+  /**
+   * Create timetable
+   * @param {Object} timetableData - Timetable data
+   * @returns {Promise<Object>} Created timetable
+   */
+  async createTimetable(timetableData) {
+    try {
+      const timetable = await this.create(COLLECTIONS.TIMETABLE, {
+        ...timetableData,
+        createdBy: AuthService.getCurrentUser()?.uid,
+        isActive: true,
+      });
+
+      await this._logAdminActivity('create_timetable', 'timetable', timetable.id, {
+        class: timetableData.class,
+        section: timetableData.section,
+      });
+
+      return timetable;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get timetable by class and section
+   * @param {string} className - Class name
+   * @param {string} section - Section
+   * @returns {Promise<Object|null>} Timetable data or null
+   */
+  async getTimetableByClass(className, section) {
+    try {
+      const timetables = await this.query(COLLECTIONS.TIMETABLE, [
+        { field: 'class', operator: '==', value: className },
+        { field: 'section', operator: '==', value: section },
+        { field: 'isActive', operator: '==', value: true }
+      ], { field: 'createdAt', direction: 'desc' }, 1);
+
+      return timetables.length > 0 ? timetables[0] : null;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Contacts Operations ====================
+
+  /**
+   * Create contact
+   * @param {Object} contactData - Contact data
+   * @returns {Promise<Object>} Created contact
+   */
+  async createContact(contactData) {
+    try {
+      const contact = await this.create(COLLECTIONS.CONTACTS, {
+        ...contactData,
+        createdBy: AuthService.getCurrentUser()?.uid,
+        isActive: true,
+      });
+
+      await this._logAdminActivity('create_contact', 'contact', contact.id, {
+        name: contactData.name,
+        type: contactData.type,
+      });
+
+      return contact;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get contacts by type
+   * @param {string} type - Contact type (optional)
+   * @returns {Promise<Array>} Array of contacts
+   */
+  async getContacts(type = null) {
+    try {
+      const filters = [{ field: 'isActive', operator: '==', value: true }];
+
+      if (type) {
+        filters.push({ field: 'type', operator: '==', value: type });
+      }
+
+      return await this.query(COLLECTIONS.CONTACTS, filters, { field: 'name', direction: 'asc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Exams Schedule Operations ====================
+
+  /**
+   * Create exam schedule
+   * @param {Object} examData - Exam schedule data
+   * @returns {Promise<Object>} Created exam schedule
+   */
+  async createExamSchedule(examData) {
+    try {
+      const exam = await this.create(COLLECTIONS.EXAMS, {
+        ...examData,
+        createdBy: AuthService.getCurrentUser()?.uid,
+        isPublished: false,
+      });
+
+      await this._logAdminActivity('create_exam_schedule', 'exam', exam.id, {
+        examName: examData.examName,
+        class: examData.class,
+      });
+
+      return exam;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get exam schedules by class
+   * @param {string} className - Class name
+   * @param {boolean} publishedOnly - Only get published schedules
+   * @returns {Promise<Array>} Array of exam schedules
+   */
+  async getExamSchedulesByClass(className, publishedOnly = true) {
+    try {
+      const filters = [
+        { field: 'class', operator: '==', value: className }
+      ];
+
+      if (publishedOnly) {
+        filters.push({ field: 'isPublished', operator: '==', value: true });
+      }
+
+      return await this.query(COLLECTIONS.EXAMS, filters, { field: 'startDate', direction: 'desc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  // ==================== Phase 2: Notices Operations ====================
+
+  /**
+   * Create notice
+   * @param {Object} noticeData - Notice data
+   * @returns {Promise<Object>} Created notice
+   */
+  async createNotice(noticeData) {
+    try {
+      const notice = await this.create(COLLECTIONS.NOTICES, {
+        ...noticeData,
+        createdBy: AuthService.getCurrentUser()?.uid,
+        isActive: true,
+      });
+
+      await this._logAdminActivity('create_notice', 'notice', notice.id, {
+        title: noticeData.title,
+        target: noticeData.target,
+      });
+
+      return notice;
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get notices for a student
+   * @param {string} className - Student's class name
+   * @param {string} studentId - Student ID (optional, for targeted notices)
+   * @returns {Promise<Array>} Array of notices
+   */
+  async getNoticesForStudent(className, studentId = null) {
+    try {
+      // Get notices targeted to all or specific class
+      const allNotices = await this.query(COLLECTIONS.NOTICES, [
+        { field: 'isActive', operator: '==', value: true }
+      ], { field: 'createdAt', direction: 'desc' });
+
+      // Filter notices based on target
+      return allNotices.filter(notice => {
+        if (notice.target === 'all') return true;
+        if (notice.target === 'class' && notice.targetClass === className) return true;
+        if (notice.target === 'student' && studentId && notice.targetStudents && notice.targetStudents.includes(studentId)) return true;
+        return false;
+      });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
+  /**
+   * Get all notices (admin view)
+   * @param {boolean} activeOnly - Only get active notices
+   * @returns {Promise<Array>} Array of notices
+   */
+  async getAllNotices(activeOnly = true) {
+    try {
+      const filters = activeOnly ? [{ field: 'isActive', operator: '==', value: true }] : [];
+      return await this.query(COLLECTIONS.NOTICES, filters, { field: 'createdAt', direction: 'desc' });
+    } catch (error) {
+      throw this._handleError(error);
+    }
+  }
+
   // ==================== Private Helper Methods ====================
 
   /**
